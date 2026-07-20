@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useParams,
+  useLocation,
+} from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider, useAuth } from "./context/AuthContext.tsx";
 
@@ -48,8 +56,9 @@ function AppLayout() {
     else if (v === "register") navigate("/register");
     else if (v === "explore") navigate("/explore");
     else if (v === "dashboard") navigate("/dashboard");
-    else if (v === "add_board") navigate("/boards/add");
-    else if (v === "manage_boards") navigate("/boards/manage");
+    else if (v === "add_board") navigate("/dashboard/boards/new");
+    else if (v === "manage_boards") navigate("/dashboard/boards");
+    else if (v === "settings") navigate("/dashboard/settings");
     else if (v === "about") navigate("/about");
     else if (v === "contact") navigate("/contact");
     else if (v === "terms") navigate("/terms");
@@ -73,10 +82,22 @@ function AppLayout() {
   else if (currentPath === "/login") currentView = "login";
   else if (currentPath === "/register") currentView = "register";
   else if (currentPath === "/dashboard") currentView = "dashboard";
-  else if (currentPath === "/dashboard/boards/new" || currentPath === "/boards/add") currentView = "add_board";
-  else if (currentPath === "/dashboard/boards" || currentPath === "/boards/manage") currentView = "manage_boards";
+  else if (
+    currentPath === "/dashboard/boards/new" ||
+    currentPath === "/boards/add"
+  )
+    currentView = "add_board";
+  else if (
+    currentPath === "/dashboard/boards" ||
+    currentPath === "/boards/manage"
+  )
+    currentView = "manage_boards";
   else if (currentPath === "/dashboard/settings") currentView = "settings";
-  else if (currentPath.startsWith("/dashboard/boards/") || currentPath.includes("/workspace")) currentView = "board_workspace";
+  else if (
+    currentPath.startsWith("/dashboard/boards/") ||
+    currentPath.includes("/workspace")
+  )
+    currentView = "board_workspace";
   else if (currentPath.includes("/boards/")) currentView = "board_detail";
   else if (currentPath === "/about") currentView = "about";
   else if (currentPath === "/contact") currentView = "contact";
@@ -84,27 +105,34 @@ function AppLayout() {
   else if (currentPath === "/pricing") currentView = "pricing";
   else if (currentPath === "/privacy") currentView = "terms";
 
-  const isDashboardLayout = (
-    currentPath === "/dashboard" ||
-    currentPath === "/dashboard/boards" ||
-    currentPath === "/dashboard/boards/new" ||
-    currentPath === "/dashboard/settings" ||
-    currentPath === "/boards/add" ||
-    currentPath === "/boards/manage" ||
-    currentPath.startsWith("/dashboard/boards/") ||
-    (currentPath === "/explore" && token)
-  ) && !!token;
+  const isDashboardLayout =
+    (currentPath === "/dashboard" ||
+      currentPath === "/dashboard/boards" ||
+      currentPath === "/dashboard/boards/new" ||
+      currentPath === "/dashboard/settings" ||
+      currentPath === "/boards/add" ||
+      currentPath === "/boards/manage" ||
+      currentPath.startsWith("/dashboard/boards/") ||
+      (currentPath === "/explore" && token)) &&
+    !!token;
   const isAuthView = ["/login", "/register"].includes(currentPath);
-  const isWorkspaceView = (currentPath.startsWith("/dashboard/boards/") && currentPath !== "/dashboard/boards/new" && currentPath !== "/dashboard/boards") || currentPath.includes("/workspace");
+  const isWorkspaceView =
+    (currentPath.startsWith("/dashboard/boards/") &&
+      currentPath !== "/dashboard/boards/new" &&
+      currentPath !== "/dashboard/boards") ||
+    currentPath.includes("/workspace");
 
-  const hideGlobalNavFooter = isDashboardLayout || isAuthView || isWorkspaceView;
+  const hideGlobalNavFooter =
+    isDashboardLayout || isAuthView || isWorkspaceView;
 
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50/20">
         <div className="text-center space-y-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#0F172A] border-t-transparent mx-auto"></div>
-          <p className="text-xs text-slate-500 font-mono">Verifying credentials...</p>
+          <p className="text-xs text-slate-500 font-mono">
+            Verifying credentials...
+          </p>
         </div>
       </div>
     );
@@ -126,7 +154,7 @@ function AppLayout() {
           userName={user?.name}
           userEmail={user?.email}
         />
-        
+
         {element}
 
         {/* Mobile Navigation and Drawer Controls */}
@@ -158,17 +186,16 @@ function AppLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50/40 text-gray-800 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-900">
-      
       {/* Dynamic Navigation Header */}
       {!hideGlobalNavFooter && (
-        <Navbar 
-          currentView={currentView} 
-          setView={setView} 
-          user={user} 
+        <Navbar
+          currentView={currentView}
+          setView={setView}
+          user={user}
           onLogout={() => {
             onLogout();
             navigate("/");
-          }} 
+          }}
         />
       )}
 
@@ -176,38 +203,62 @@ function AppLayout() {
       <main className="flex-grow">
         <Routes>
           <Route path="/" element={<LandingPage setView={setView} />} />
-          <Route path="/login" element={<AuthPage view="login" setView={setView} onAuthSuccess={() => {}} />} />
-          <Route path="/register" element={<AuthPage view="register" setView={setView} onAuthSuccess={() => {}} />} />
-          
-          <Route path="/explore" element={
-            token ? wrapInDashboardLayout(
-              <ExplorePage 
-                token={token} 
-                setView={setView} 
-                setSelectedBoardId={setSelectedBoardId} 
-                onCloneSuccess={(board) => {
-                  setSelectedBoardId(board._id);
-                  navigate(`/dashboard/boards/${board._id}`);
-                }} 
+          <Route
+            path="/login"
+            element={
+              <AuthPage
+                view="login"
+                setView={setView}
+                onAuthSuccess={() => {}}
               />
-            ) : (
-              <ExplorePage 
-                token={token} 
-                setView={setView} 
-                setSelectedBoardId={setSelectedBoardId} 
-                onCloneSuccess={(board) => {
-                  setSelectedBoardId(board._id);
-                  navigate(`/dashboard/boards/${board._id}`);
-                }} 
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <AuthPage
+                view="register"
+                setView={setView}
+                onAuthSuccess={() => {}}
               />
-            )
-          } />
+            }
+          />
+
+          <Route
+            path="/explore"
+            element={
+              token ? (
+                wrapInDashboardLayout(
+                  <ExplorePage
+                    token={token}
+                    setView={setView}
+                    setSelectedBoardId={setSelectedBoardId}
+                    onCloneSuccess={(board) => {
+                      setSelectedBoardId(board._id);
+                      navigate(`/dashboard/boards/${board._id}`);
+                    }}
+                  />,
+                )
+              ) : (
+                <ExplorePage
+                  token={token}
+                  setView={setView}
+                  setSelectedBoardId={setSelectedBoardId}
+                  onCloneSuccess={(board) => {
+                    setSelectedBoardId(board._id);
+                    navigate(`/dashboard/boards/${board._id}`);
+                  }}
+                />
+              )
+            }
+          />
 
           <Route path="/boards/:id" element={<PublicBoardDetailsPage />} />
-          
+
           {/* Protected Dashboard Views */}
-          <Route path="/dashboard" element={
-            wrapInDashboardLayout(
+          <Route
+            path="/dashboard"
+            element={wrapInDashboardLayout(
               <ExecutiveDashboard
                 token={token}
                 setView={setView}
@@ -217,49 +268,58 @@ function AppLayout() {
                   navigate("/");
                 }}
                 user={user}
-              />
-            )
-          } />
+              />,
+            )}
+          />
 
-          <Route path="/dashboard/boards/new" element={
-            wrapInDashboardLayout(
-              <NewBoardPage 
-                token={token} 
-                setView={setView} 
+          <Route
+            path="/dashboard/boards/new"
+            element={wrapInDashboardLayout(
+              <NewBoardPage
+                token={token}
+                setView={setView}
                 onCreateSuccess={(board) => {
                   setSelectedBoardId(board._id);
                   navigate(`/dashboard/boards/${board._id}`);
-                }} 
-              />
-            )
-          } />
+                }}
+              />,
+            )}
+          />
 
-          <Route path="/dashboard/boards" element={
-            wrapInDashboardLayout(
-              <ManageBoardsPage 
-                token={token} 
-                setView={setView} 
-                setSelectedBoardId={setSelectedBoardId} 
-              />
-            )
-          } />
+          <Route
+            path="/dashboard/boards"
+            element={wrapInDashboardLayout(
+              <ManageBoardsPage
+                token={token}
+                setView={setView}
+                setSelectedBoardId={setSelectedBoardId}
+              />,
+            )}
+          />
 
-          <Route path="/dashboard/boards/:id" element={
-            wrapInDashboardLayout(
-              <WorkspaceWrapper />
-            )
-          } />
+          <Route
+            path="/dashboard/boards/:id"
+            element={wrapInDashboardLayout(<WorkspaceWrapper />)}
+          />
 
-          <Route path="/dashboard/settings" element={
-            wrapInDashboardLayout(
-              <SettingsPage />
-            )
-          } />
+          <Route
+            path="/dashboard/settings"
+            element={wrapInDashboardLayout(<SettingsPage />)}
+          />
 
           {/* Fallback Legacy Redirects */}
-          <Route path="/boards/add" element={<Navigate to="/dashboard/boards/new" replace />} />
-          <Route path="/boards/manage" element={<Navigate to="/dashboard/boards" replace />} />
-          <Route path="/boards/:id/workspace" element={<LegacyWorkspaceRedirect />} />
+          <Route
+            path="/boards/add"
+            element={<Navigate to="/dashboard/boards/new" replace />}
+          />
+          <Route
+            path="/boards/manage"
+            element={<Navigate to="/dashboard/boards" replace />}
+          />
+          <Route
+            path="/boards/:id/workspace"
+            element={<LegacyWorkspaceRedirect />}
+          />
 
           {/* Static Pages */}
           <Route path="/about" element={<AboutPage />} />
@@ -277,7 +337,6 @@ function AppLayout() {
 
       {/* Persistent platform footer */}
       {!hideGlobalNavFooter && <Footer setView={setView} />}
-
     </div>
   );
 }
@@ -301,13 +360,7 @@ function WorkspaceWrapper() {
     return <Navigate to="/login" replace />;
   }
 
-  return (
-    <BoardWorkspace 
-      boardId={id!} 
-      token={token} 
-      setView={setView} 
-    />
-  );
+  return <BoardWorkspace boardId={id!} token={token} setView={setView} />;
 }
 
 // Legacy workspace redirect helper

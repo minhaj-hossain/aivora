@@ -106,15 +106,13 @@ export default function Navbar({
               <>
                 <button
                   onClick={() => handleNav("dashboard")}
-                  className={`relative px-4 py-2 flex items-center gap-1.5 text-sm font-medium font-display transition-colors rounded-full select-none ${
-                    currentView === "dashboard" ||
-                    currentView === "board_workspace"
+                  className={`relative px-4 py-2 text-sm font-medium font-display transition-colors rounded-full select-none ${
+                    currentView === "dashboard"
                       ? "text-[#0F172A] font-semibold"
                       : "text-slate-500 hover:text-[#0F172A]"
                   }`}
                 >
-                  {(currentView === "dashboard" ||
-                    currentView === "board_workspace") && (
+                  {currentView === "dashboard" && (
                     <motion.span
                       layoutId="activeNavBackground"
                       className="absolute inset-0 bg-slate-100/75 rounded-full -z-10"
@@ -125,18 +123,21 @@ export default function Navbar({
                       }}
                     />
                   )}
-                  <LayoutDashboard className="h-4 w-4" />
                   Dashboard
                 </button>
                 <button
-                  onClick={() => handleNav("add_board")}
-                  className={`relative px-4 py-2 flex items-center gap-1.5 text-sm font-medium font-display transition-colors rounded-full select-none ${
+                  onClick={() => handleNav("manage_boards")}
+                  className={`relative px-4 py-2 text-sm font-medium font-display transition-colors rounded-full select-none ${
+                    currentView === "manage_boards" ||
+                    currentView === "board_workspace" ||
                     currentView === "add_board"
                       ? "text-[#0F172A] font-semibold"
                       : "text-slate-500 hover:text-[#0F172A]"
                   }`}
                 >
-                  {currentView === "add_board" && (
+                  {(currentView === "manage_boards" ||
+                    currentView === "board_workspace" ||
+                    currentView === "add_board") && (
                     <motion.span
                       layoutId="activeNavBackground"
                       className="absolute inset-0 bg-slate-100/75 rounded-full -z-10"
@@ -147,18 +148,17 @@ export default function Navbar({
                       }}
                     />
                   )}
-                  <PlusCircle className="h-4 w-4" />
-                  New Board
+                  Workspaces
                 </button>
                 <button
-                  onClick={() => handleNav("manage_boards")}
-                  className={`relative px-4 py-2 flex items-center gap-1.5 text-sm font-medium font-display transition-colors rounded-full select-none ${
-                    currentView === "manage_boards"
+                  onClick={() => handleNav("settings")}
+                  className={`relative px-4 py-2 text-sm font-medium font-display transition-colors rounded-full select-none ${
+                    currentView === "settings"
                       ? "text-[#0F172A] font-semibold"
                       : "text-slate-500 hover:text-[#0F172A]"
                   }`}
                 >
-                  {currentView === "manage_boards" && (
+                  {currentView === "settings" && (
                     <motion.span
                       layoutId="activeNavBackground"
                       className="absolute inset-0 bg-slate-100/75 rounded-full -z-10"
@@ -169,8 +169,7 @@ export default function Navbar({
                       }}
                     />
                   )}
-                  <Settings className="h-4 w-4" />
-                  Manage
+                  Settings
                 </button>
               </>
             )}
@@ -250,24 +249,21 @@ export default function Navbar({
                 <div className="space-y-0.5">
                   <button
                     onClick={() => handleNav("dashboard")}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors cursor-pointer"
+                    className="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors cursor-pointer"
                   >
-                    <LayoutDashboard className="h-4 w-4 text-slate-400" />
                     Dashboard
                   </button>
                   <button
-                    onClick={() => handleNav("add_board")}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors cursor-pointer"
+                    onClick={() => handleNav("manage_boards")}
+                    className="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors cursor-pointer"
                   >
-                    <PlusCircle className="h-4 w-4 text-slate-400" />
-                    New Board
+                    Workspaces
                   </button>
                   <button
-                    onClick={() => handleNav("manage_boards")}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors cursor-pointer"
+                    onClick={() => handleNav("settings")}
+                    className="flex w-full items-center rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-950 transition-colors cursor-pointer"
                   >
-                    <Settings className="h-4 w-4 text-slate-400" />
-                    Manage Boards
+                    Settings
                   </button>
                 </div>
 
@@ -275,9 +271,8 @@ export default function Navbar({
 
                 <button
                   onClick={onLogout}
-                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-red-600 hover:bg-red-50/70 hover:text-red-700 transition-colors cursor-pointer"
+                  className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-red-600 hover:bg-red-50/70 hover:text-red-700 transition-colors cursor-pointer"
                 >
-                  <LogOut className="h-4 w-4" />
                   Sign Out
                 </button>
               </div>
@@ -345,36 +340,34 @@ export default function Navbar({
                 <button
                   onClick={() => handleNav("dashboard")}
                   className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-base font-semibold font-display ${
-                    currentView === "dashboard" ||
-                    currentView === "board_workspace"
+                    currentView === "dashboard"
                       ? "bg-slate-100 text-[#0F172A]"
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  <LayoutDashboard className="h-5 w-5" />
                   Dashboard
                 </button>
                 <button
-                  onClick={() => handleNav("add_board")}
+                  onClick={() => handleNav("manage_boards")}
                   className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-base font-semibold font-display ${
+                    currentView === "manage_boards" ||
+                    currentView === "board_workspace" ||
                     currentView === "add_board"
                       ? "bg-slate-100 text-[#0F172A]"
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  <PlusCircle className="h-5 w-5" />
-                  New Board
+                  Workspaces
                 </button>
                 <button
-                  onClick={() => handleNav("manage_boards")}
+                  onClick={() => handleNav("settings")}
                   className={`flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-base font-semibold font-display ${
-                    currentView === "manage_boards"
+                    currentView === "settings"
                       ? "bg-slate-100 text-[#0F172A]"
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  <Settings className="h-5 w-5" />
-                  Manage Boards
+                  Settings
                 </button>
               </>
             )}
@@ -409,7 +402,6 @@ export default function Navbar({
                   }}
                   className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-white py-3 text-sm font-semibold text-red-600 hover:bg-slate-50"
                 >
-                  <LogOut className="h-5 w-5" />
                   Logout
                 </button>
               </div>
