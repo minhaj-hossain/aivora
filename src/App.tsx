@@ -16,6 +16,7 @@ import AboutPage from "./components/AboutPage.tsx";
 import ContactPage from "./components/ContactPage.tsx";
 import TermsPage from "./components/TermsPage.tsx";
 import PrivacyPage from "./components/PrivacyPage.tsx";
+import PricingPage from "./components/PricingPage.tsx";
 import ExecutiveDashboard from "./components/ExecutiveDashboard.tsx";
 import SettingsPage from "./components/dashboard/SettingsPage.tsx";
 
@@ -52,6 +53,7 @@ function AppLayout() {
     else if (v === "about") navigate("/about");
     else if (v === "contact") navigate("/contact");
     else if (v === "terms") navigate("/terms");
+    else if (v === "pricing") navigate("/pricing");
     else if (v === "privacy") navigate("/privacy");
     else if (v === "board_workspace") {
       if (selectedBoardId) {
@@ -79,6 +81,7 @@ function AppLayout() {
   else if (currentPath === "/about") currentView = "about";
   else if (currentPath === "/contact") currentView = "contact";
   else if (currentPath === "/terms") currentView = "terms";
+  else if (currentPath === "/pricing") currentView = "pricing";
   else if (currentPath === "/privacy") currentView = "terms";
 
   const isDashboardLayout = (
@@ -263,6 +266,9 @@ function AppLayout() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
+
+          {/* Pricing */}
+          <Route path="/pricing" element={<PricingPage />} />
 
           {/* Fallback Redirection */}
           <Route path="*" element={<Navigate to="/" replace />} />

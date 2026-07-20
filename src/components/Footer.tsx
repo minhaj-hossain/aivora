@@ -52,6 +52,11 @@ export default function Footer({ setView }: FooterProps) {
                 </button>
               </li>
               <li>
+                <button onClick={() => setView("pricing")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
+                  Pricing
+                </button>
+              </li>
+              <li>
                 <button onClick={() => setView("about")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
                   Integrations
                 </button>
