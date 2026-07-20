@@ -22,6 +22,51 @@ function getGeminiClient() {
   return aiClient;
 }
 
+// Tolerant JSON extraction: models sometimes wrap JSON in code fences or
+// prose. This pulls the first balanced {...} object out of the response.
+function extractJson<T>(text: string): T {
+  if (typeof text !== "string") {
+    throw new Error("Empty response from AI model.");
+  }
+  const trimmed = text.trim();
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    // Try to locate the first JSON object in the text.
+    const start = trimmed.indexOf("{");
+    const end = trimmed.lastIndexOf("}");
+    if (start !== -1 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1)) as T;
+    }
+    throw new Error("AI model returned an unparseable response.");
+  }
+}
+
+// Ordered list of Gemini models to try. The first is preferred; if it is
+// temporarily unavailable we transparently fall back to the next.
+const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+
+// Calls generateContent, falling back through GEMINI_MODELS on failure.
+async function generateWithFallback(
+  client: any,
+  params: { contents: any; config?: any },
+) {
+  let lastError: any;
+  for (const model of GEMINI_MODELS) {
+    try {
+      return await client.models.generateContent({ model, ...params });
+    } catch (err: any) {
+      lastError = err;
+      // Only fall back on model/availability errors, not on bad input.
+      const msg = (err?.message || "").toLowerCase();
+      if (msg.includes("api key") || msg.includes("permission") || msg.includes("quota")) {
+        break;
+      }
+    }
+  }
+  throw lastError;
+}
+
 // --- OPTIONAL AUTH MIDDLEWARE FOR GET BOARDS ---
 function optionalAuthenticateToken(req: any, res: Response, next: () => void) {
   const authHeader = req.headers["authorization"];
@@ -411,8 +456,7 @@ Instructions:
         parts: [{ text: msg.content }],
       }));
 
-      const response = await client.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await generateWithFallback(client, {
         contents: contents,
         config: {
           systemInstruction: systemPrompt,
@@ -433,9 +477,9 @@ Instructions:
         },
       });
 
-      const parsed = JSON.parse(response.text);
-      reply = parsed.reply;
-      suggestions = parsed.suggestions;
+      const parsed = extractJson<{ reply?: string; suggestions?: string[] }>(response.text);
+      reply = parsed.reply || "";
+      suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
 
       // Save Model response
       const modelMsg = await db.createMessage({
@@ -523,8 +567,7 @@ Document requirements:
 
 Begin generating immediately in markdown format:`;
 
-      const response = await client.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await generateWithFallback(client, {
         contents: generationPrompt,
       });
 
@@ -605,8 +648,7 @@ The output MUST be in JSON format matching the schema:
   ]
 }`;
 
-      const response = await client.models.generateContent({
-        model: "gemini-3.5-flash",
+      const response = await generateWithFallback(client, {
         contents: systemPrompt,
         config: {
           responseMimeType: "application/json",
@@ -634,8 +676,8 @@ The output MUST be in JSON format matching the schema:
         },
       });
 
-      const parsed = JSON.parse(response.text);
-      recommendations = parsed.recommendations;
+      const parsed = extractJson<{ recommendations?: any[] }>(response.text);
+      recommendations = Array.isArray(parsed.recommendations) ? parsed.recommendations : [];
 
       res.json({ recommendations });
     } catch (err: any) {

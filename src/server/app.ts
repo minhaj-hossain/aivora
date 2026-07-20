@@ -1,9 +1,14 @@
-import "dotenv/config";
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { authRouter } from "./auth.ts";
 import { boardsRouter } from "./boards.ts";
+
+// Load dotenv only outside Vercel (Vercel injects env vars natively).
+// Imported lazily so the serverless bundle never touches dotenv at load time
+// unless actually running locally.
+if (!process.env.VERCEL) {
+  import("dotenv/config").catch(() => {});
+}
 
 const app = express();
 
@@ -29,8 +34,9 @@ async function setupFrontendMiddleware() {
     return;
   }
 
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
     console.log("Starting server in DEVELOPMENT mode with Vite middleware...");
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",

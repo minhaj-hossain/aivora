@@ -142,11 +142,18 @@ const DEFAULT_MESSAGES: Record<string, Partial<IMessage>[]> = {
 
 // --- DATABASE ACCESS INTERFACE (REPOSITORY PATTERN) ---
 
+// Cache the Mongoose connection promise across serverless cold starts.
+// Without this, every Vercel function invocation opens a new connection
+// (or races before the first one finishes) and auth fails intermittently.
+let cachedConnection: Promise<typeof mongoose> | null = null;
+
 export class DatabaseService {
   public isLocal: boolean = false;
 
   constructor() {
-    this.initDatabase();
+    if (!cachedConnection) {
+      cachedConnection = this.initDatabase();
+    }
   }
 
   private async initDatabase() {
@@ -159,8 +166,11 @@ export class DatabaseService {
       });
       console.log("Successfully connected to MongoDB Database!");
       await this.seedDatabase();
+      return mongoose;
     } catch (err) {
       console.error("Critical: MongoDB connection failed!", err);
+      cachedConnection = null;
+      throw err;
     }
   }
 
@@ -196,19 +206,30 @@ export class DatabaseService {
     }
   }
 
+  // Resolves once MongoDB is connected. Awaited by every repository method
+  // so a request never races ahead of the (possibly first) connection.
+  private async ready(): Promise<void> {
+    if (cachedConnection) {
+      await cachedConnection;
+    }
+  }
+
   // --- REPOSITORY API: USER ---
 
   public async createUser(userData: Partial<IUser>): Promise<IUser> {
+    await this.ready();
     const created = await MongoUser.create(userData);
     return created.toObject();
   }
 
   public async findUserByEmail(email: string): Promise<IUser | null> {
+    await this.ready();
     const user = await MongoUser.findOne({ email: email.toLowerCase() });
     return user ? user.toObject() : null;
   }
 
   public async findUserById(id: string): Promise<IUser | null> {
+    await this.ready();
     const user = await MongoUser.findById(id);
     return user ? user.toObject() : null;
   }
@@ -216,6 +237,7 @@ export class DatabaseService {
   // --- REPOSITORY API: BOARDS ---
 
   public async createBoard(boardData: Partial<IBoard>): Promise<IBoard> {
+    await this.ready();
     const created = await MongoBoard.create(boardData);
     return created.toObject();
   }
@@ -227,7 +249,8 @@ export class DatabaseService {
     ownerId?: string | null;
   }): Promise<IBoard[]> {
     const query: any = {};
-    
+    await this.ready();
+
     if (filters.search) {
       query.$or = [
         { title: { $regex: filters.search, $options: "i" } },
@@ -252,6 +275,7 @@ export class DatabaseService {
   }
 
   public async getBoardById(id: string): Promise<IBoard | null> {
+    await this.ready();
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return null;
     }
@@ -260,6 +284,7 @@ export class DatabaseService {
   }
 
   public async updateBoard(id: string, updates: Partial<IBoard>): Promise<IBoard | null> {
+    await this.ready();
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return null;
     }
@@ -272,6 +297,7 @@ export class DatabaseService {
   }
 
   public async deleteBoard(id: string): Promise<boolean> {
+    await this.ready();
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return false;
     }
@@ -284,11 +310,13 @@ export class DatabaseService {
   // --- REPOSITORY API: MESSAGES ---
 
   public async createMessage(msgData: Partial<IMessage>): Promise<IMessage> {
+    await this.ready();
     const created = await MongoMessage.create(msgData);
     return created.toObject();
   }
 
   public async getMessagesByBoardId(boardId: string): Promise<IMessage[]> {
+    await this.ready();
     const list = await MongoMessage.find({ boardId }).sort({ createdAt: 1 });
     return list.map((m: any) => m.toObject());
   }
@@ -296,16 +324,19 @@ export class DatabaseService {
   // --- REPOSITORY API: GENERATED OUTPUTS ---
 
   public async createGeneratedOutput(outData: Partial<IGeneratedOutput>): Promise<IGeneratedOutput> {
+    await this.ready();
     const created = await MongoGeneratedOutput.create(outData);
     return created.toObject();
   }
 
   public async getGeneratedOutputsByBoard(boardId: string): Promise<IGeneratedOutput[]> {
+    await this.ready();
     const list = await MongoGeneratedOutput.find({ boardId }).sort({ version: -1 });
     return list.map((o: any) => o.toObject());
   }
 
   public async getUserStats(userId: string) {
+    await this.ready();
     const list = await MongoBoard.find({ ownerId: userId }).sort({ updatedAt: -1 });
     const userBoards = list.map((b: any) => b.toObject());
     const boardIds = userBoards.map(b => b._id.toString());

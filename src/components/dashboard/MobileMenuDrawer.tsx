@@ -1,5 +1,5 @@
 import React from "react";
-import { X, Settings, HelpCircle, LogOut, ShieldAlert, BadgeCheck, Sparkles } from "lucide-react";
+import { X, Settings, HelpCircle, LogOut, ShieldAlert, BadgeCheck, Sparkles, Home } from "lucide-react";
 import { ActiveView } from "../../types";
 
 interface MobileMenuDrawerProps {
@@ -66,6 +66,14 @@ export default function MobileMenuDrawer({
 
         {/* Navigation Links */}
         <nav className="flex flex-col gap-1 text-left">
+          <button
+            onClick={() => { setView("home"); onClose(); }}
+            className="flex items-center gap-3.5 p-3 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-all cursor-pointer font-display text-xs font-bold"
+          >
+            <Home className="h-4.5 w-4.5 text-slate-400" />
+            <span>Home Platform</span>
+          </button>
+
           <button
             onClick={() => { setView("about"); onClose(); }}
             className="flex items-center gap-3.5 p-3 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-all cursor-pointer font-display text-xs font-bold"

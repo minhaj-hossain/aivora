@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Compass, FolderKanban, HelpCircle, LogOut, User } from "lucide-react";
+import { LayoutDashboard, Compass, FolderKanban, HelpCircle, Home } from "lucide-react";
 import { ActiveView } from "../../types";
 
 interface BottomNavBarProps {
@@ -18,6 +18,11 @@ export default function BottomNavBar({
   onToggleDrawer,
 }: BottomNavBarProps) {
   const tabs = [
+    {
+      id: "home" as ActiveView,
+      label: "Home",
+      icon: Home,
+    },
     {
       id: "dashboard" as ActiveView,
       label: "Dashboard",
