@@ -134,7 +134,14 @@ export default function BoardWorkspace({ boardId, token, setView }: BoardWorkspa
         body: JSON.stringify({ message: textToSend.trim() }),
       });
 
-      const data = await response.json();
+      let data: any = {};
+      try {
+        data = await response.json();
+      } catch {
+        // Server may have returned a non-JSON error page (e.g. gateway timeout).
+        const text = await response.text().catch(() => "");
+        throw new Error(text || `Request failed (${response.status}). Check your connection and retry.`);
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to send chat payload.");
@@ -148,7 +155,11 @@ export default function BoardWorkspace({ boardId, token, setView }: BoardWorkspa
       setFollowUps(data.suggestions || []);
       fetchSmartRecommendations();
     } catch (err: any) {
-      setError(err.message || "AI co-thinker timed out or refused packages.");
+      const msg = err?.message || "AI co-thinker timed out or refused packages.";
+      const quotaHint = /429|quota|rate.?limit|resource exhausted/i.test(msg)
+        ? " (Gemini API quota exceeded — wait a moment or raise limits in Google AI Studio)."
+        : "";
+      setError(msg + quotaHint);
     } finally {
       setSendingChat(false);
     }

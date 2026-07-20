@@ -44,7 +44,9 @@ function extractJson<T>(text: string): T {
 
 // Ordered list of Gemini models to try. The first is preferred; if it is
 // temporarily unavailable we transparently fall back to the next.
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+// NOTE: gemini-2.0-flash is the primary because it is broadly available on
+// standard API keys; gemini-2.5-flash may be unavailable depending on the key.
+const GEMINI_MODELS = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
 
 // Calls generateContent, falling back through GEMINI_MODELS on failure.
 async function generateWithFallback(
@@ -57,14 +59,29 @@ async function generateWithFallback(
       return await client.models.generateContent({ model, ...params });
     } catch (err: any) {
       lastError = err;
-      // Only fall back on model/availability errors, not on bad input.
-      const msg = (err?.message || "").toLowerCase();
-      if (msg.includes("api key") || msg.includes("permission") || msg.includes("quota")) {
-        break;
+      const clean = cleanGeminiError(err);
+      // Don't fall back for auth/quota/permission errors — retrying other
+      // models won't help, and we want to surface the real message.
+      const lower = clean.toLowerCase();
+      if (lower.includes("api key") || lower.includes("permission") || lower.includes("quota") || lower.includes("exhausted")) {
+        throw new Error(clean);
       }
     }
   }
-  throw lastError;
+  throw new Error(cleanGeminiError(lastError));
+}
+
+// Google's SDK throws an error whose .message is a big JSON blob. Extract a
+// short, human-readable summary so the frontend can display it cleanly.
+function cleanGeminiError(err: any): string {
+  const raw = err?.message || String(err);
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed?.error?.message) return parsed.error.message;
+  } catch {
+    /* not JSON, return as-is */
+  }
+  return raw;
 }
 
 // --- OPTIONAL AUTH MIDDLEWARE FOR GET BOARDS ---
