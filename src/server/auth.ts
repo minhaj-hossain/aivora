@@ -17,7 +17,11 @@ export interface AuthenticatedRequest extends Request {
 }
 
 // JWT Verification Middleware
-export function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
+export function authenticateToken(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+): void {
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1];
 
@@ -27,7 +31,11 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
   }
 
   try {
-    const verified = jwt.verify(token, JWT_SECRET) as { userId: string; email: string; name: string };
+    const verified = jwt.verify(token, JWT_SECRET) as {
+      userId: string;
+      email: string;
+      name: string;
+    };
     req.user = verified;
     next();
   } catch (err) {
@@ -38,89 +46,99 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
 // --- ENDPOINTS ---
 
 // Register
-authRouter.post("/register", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { name, email, password } = req.body;
+authRouter.post(
+  "/register",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
-      res.status(400).json({ error: "Name, email, and password are required." });
-      return;
+      if (!name || !email || !password) {
+        res
+          .status(400)
+          .json({ error: "Name, email, and password are required." });
+        return;
+      }
+
+      const existingUser = await db.findUserByEmail(email);
+      if (existingUser) {
+        res
+          .status(400)
+          .json({ error: "A user with this email already exists." });
+        return;
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await db.createUser({
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+      });
+
+      const token = jwt.sign(
+        { userId: user._id, email: user.email, name: user.name },
+        JWT_SECRET,
+        { expiresIn: "7d" },
+      );
+
+      res.status(201).json({
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+        },
+      });
+    } catch (err) {
+      console.error("Error in register:", err);
+      res.status(500).json({ error: "Failed to register user." });
     }
-
-    const existingUser = await db.findUserByEmail(email);
-    if (existingUser) {
-      res.status(400).json({ error: "A user with this email already exists." });
-      return;
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await db.createUser({
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-    });
-
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, name: user.name },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  } catch (err) {
-    console.error("Error in register:", err);
-    res.status(500).json({ error: "Failed to register user." });
-  }
-});
+  },
+);
 
 // Login
-authRouter.post("/login", async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { email, password } = req.body;
+authRouter.post(
+  "/login",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { email, password } = req.body;
 
-    if (!email || !password) {
-      res.status(400).json({ error: "Email and password are required." });
-      return;
+      if (!email || !password) {
+        res.status(400).json({ error: "Email and password are required." });
+        return;
+      }
+
+      const user = await db.findUserByEmail(email);
+      if (!user || !user.password) {
+        res.status(400).json({ error: "Invalid email or password." });
+        return;
+      }
+
+      const validPassword = await bcrypt.compare(password, user.password);
+      if (!validPassword) {
+        res.status(400).json({ error: "Invalid email or password." });
+        return;
+      }
+
+      const token = jwt.sign(
+        { userId: user._id, email: user.email, name: user.name },
+        JWT_SECRET,
+        { expiresIn: "7d" },
+      );
+
+      res.json({
+        token,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+        },
+      });
+    } catch (err) {
+      console.error("Error in login:", err);
+      res.status(500).json({ error: "Failed to log in." });
     }
-
-    const user = await db.findUserByEmail(email);
-    if (!user || !user.password) {
-      res.status(400).json({ error: "Invalid email or password." });
-      return;
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      res.status(400).json({ error: "Invalid email or password." });
-      return;
-    }
-
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, name: user.name },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  } catch (err) {
-    console.error("Error in login:", err);
-    res.status(500).json({ error: "Failed to log in." });
-  }
-});
+  },
+);
 
 // One-Click Seeded Demo Login
 authRouter.post("/demo", async (req: Request, res: Response): Promise<void> => {
@@ -140,7 +158,7 @@ authRouter.post("/demo", async (req: Request, res: Response): Promise<void> => {
     const token = jwt.sign(
       { userId: user._id, email: user.email, name: user.name },
       JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     res.json({
@@ -163,90 +181,123 @@ authRouter.post("/demo", async (req: Request, res: Response): Promise<void> => {
 authRouter.get("/google/url", (req: Request, res: Response) => {
   const client_id = process.env.GOOGLE_CLIENT_ID;
   if (!client_id) {
-    return res.status(400).json({ error: "Google OAuth is not configured yet. GOOGLE_CLIENT_ID is missing." });
+    return res.status(400).json({
+      error: "Google OAuth is not configured yet. GOOGLE_CLIENT_ID is missing.",
+    });
   }
 
-  // Construct callback URL dynamically using request host
-  const redirect_uri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?` + new URLSearchParams({
-    client_id,
-    redirect_uri,
-    response_type: "code",
-    scope: "openid email profile",
-    access_type: "offline",
-    prompt: "consent"
-  }).toString();
+  // Construct callback URL dynamically and safely: force https on cloud environment/proxies, http on localhost
+  const host = req.get("host") || "";
+  const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+  const protocol = isLocal ? "http" : "https";
+  const redirect_uri =
+    process.env.GOOGLE_REDIRECT_URI ||
+    `${protocol}://${host}/api/auth/google/callback`;
+
+  const url =
+    `https://accounts.google.com/o/oauth2/v2/auth?` +
+    new URLSearchParams({
+      client_id,
+      redirect_uri,
+      response_type: "code",
+      scope: "openid email profile",
+      access_type: "offline",
+      prompt: "consent",
+    }).toString();
 
   res.json({ url });
 });
 
 // Google OAuth Callback endpoint (popup closes itself and postMessage back to applet iframe)
-authRouter.get(["/google/callback", "/google/callback/"], async (req: Request, res: Response) => {
-  const { code } = req.query;
-  if (!code) {
-    return res.status(400).send("<h3>Authentication Error: No authorization code provided.</h3>");
-  }
-
-  try {
-    const client_id = process.env.GOOGLE_CLIENT_ID;
-    const client_secret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirect_uri = `${req.protocol}://${req.get("host")}/api/auth/google/callback`;
-
-    if (!client_id || !client_secret) {
-      throw new Error("GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing on the server.");
+authRouter.get(
+  [
+    "/google/callback",
+    "/google/callback/",
+    "/callback/google",
+    "/callback/google/",
+  ],
+  async (req: Request, res: Response) => {
+    const { code } = req.query;
+    if (!code) {
+      return res
+        .status(400)
+        .send("<h3>Authentication Error: No authorization code provided.</h3>");
     }
 
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        code: code as string,
-        client_id,
-        client_secret,
-        redirect_uri,
-        grant_type: "authorization_code"
-      }).toString()
-    });
+    try {
+      const client_id = process.env.GOOGLE_CLIENT_ID;
+      const client_secret = process.env.GOOGLE_CLIENT_SECRET;
 
-    if (!tokenResponse.ok) {
-      throw new Error("Failed to exchange auth code for tokens: " + await tokenResponse.text());
-    }
+      // Construct callback URL dynamically and safely: force https on cloud environment/proxies, http on localhost
+      const host = req.get("host") || "";
+      const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+      const protocol = isLocal ? "http" : "https";
+      const redirect_uri =
+        process.env.GOOGLE_REDIRECT_URI ||
+        `${protocol}://${host}/api/auth/google/callback`;
 
-    const tokens = (await tokenResponse.json()) as any;
-    const idToken = tokens.id_token;
+      if (!client_id || !client_secret) {
+        throw new Error(
+          "GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing on the server.",
+        );
+      }
 
-    if (!idToken) {
-      throw new Error("No id_token returned by Google auth server.");
-    }
-
-    // Decode ID Token payload
-    const payloadBase64 = idToken.split(".")[1];
-    const payload = JSON.parse(Buffer.from(payloadBase64, "base64").toString("utf-8"));
-
-    const email = payload.email;
-    const name = payload.name || payload.given_name || "Google User";
-
-    if (!email) {
-      throw new Error("No email retrieved from Google account profile.");
-    }
-
-    // Create user if not exists
-    let user = await db.findUserByEmail(email);
-    if (!user) {
-      user = await db.createUser({
-        email: email.toLowerCase(),
-        name,
+      const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code: code as string,
+          client_id,
+          client_secret,
+          redirect_uri,
+          grant_type: "authorization_code",
+        }).toString(),
       });
-    }
 
-    const token = jwt.sign(
-      { userId: user._id, email: user.email, name: user.name },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+      if (!tokenResponse.ok) {
+        throw new Error(
+          "Failed to exchange auth code for tokens: " +
+            (await tokenResponse.text()),
+        );
+      }
 
-    // Deliver token securely to parent window inside preview iframe using postMessage, then self-close.
-    res.send(`
+      const tokens = (await tokenResponse.json()) as any;
+      const idToken = tokens.id_token;
+
+      if (!idToken) {
+        throw new Error("No id_token returned by Google auth server.");
+      }
+
+      // Decode ID Token payload
+      const payloadBase64 = idToken.split(".")[1];
+      const payload = JSON.parse(
+        Buffer.from(payloadBase64, "base64").toString("utf-8"),
+      );
+
+      const email = payload.email;
+      const name = payload.name || payload.given_name || "Google User";
+
+      if (!email) {
+        throw new Error("No email retrieved from Google account profile.");
+      }
+
+      // Create user if not exists
+      let user = await db.findUserByEmail(email);
+      if (!user) {
+        user = await db.createUser({
+          email: email.toLowerCase(),
+          name,
+        });
+      }
+
+      const token = jwt.sign(
+        { userId: user._id, email: user.email, name: user.name },
+        JWT_SECRET,
+        { expiresIn: "7d" },
+      );
+
+      // Deliver token securely to parent window inside preview iframe using postMessage, then self-close.
+      res.send(`
       <html>
         <head>
           <title>Aivora Google Login Success</title>
@@ -283,9 +334,9 @@ authRouter.get(["/google/callback", "/google/callback/"], async (req: Request, r
         </body>
       </html>
     `);
-  } catch (err) {
-    console.error("Google OAuth error:", err);
-    res.status(500).send(`
+    } catch (err) {
+      console.error("Google OAuth error:", err);
+      res.status(500).send(`
       <html>
         <body style="font-family: sans-serif; text-align: center; padding: 50px; background: #0b0f19; color: #ef4444;">
           <h2>Google Authentication Failed</h2>
@@ -294,31 +345,36 @@ authRouter.get(["/google/callback", "/google/callback/"], async (req: Request, r
         </body>
       </html>
     `);
-  }
-});
+    }
+  },
+);
 
 // Get Me
-authRouter.get("/me", authenticateToken as any, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
+authRouter.get(
+  "/me",
+  authenticateToken as any,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
 
-    const user = await db.findUserById(userId);
-    if (!user) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
+      const user = await db.findUserById(userId);
+      if (!user) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
 
-    res.json({
-      id: user._id,
-      name: user.name,
-      email: user.email,
-    });
-  } catch (err) {
-    console.error("Error in me:", err);
-    res.status(500).json({ error: "Failed to retrieve profile." });
-  }
-});
+      res.json({
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      });
+    } catch (err) {
+      console.error("Error in me:", err);
+      res.status(500).json({ error: "Failed to retrieve profile." });
+    }
+  },
+);
