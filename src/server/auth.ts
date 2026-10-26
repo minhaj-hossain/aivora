@@ -320,7 +320,7 @@ authRouter.get(
                   type: "OAUTH_AUTH_SUCCESS",
                   token: "${token}",
                   user: ${JSON.stringify({ id: user._id, name: user.name, email: user.email })}
-                }, "*");
+                }, window.location.origin);
                 setTimeout(() => window.close(), 1000);
               } else {
                 // Fallback direct redirection
@@ -375,6 +375,41 @@ authRouter.get(
     } catch (err) {
       console.error("Error in me:", err);
       res.status(500).json({ error: "Failed to retrieve profile." });
+    }
+  },
+);
+
+// Update Me (Profile display name)
+authRouter.put(
+  "/me",
+  authenticateToken as any,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+      const { name } = req.body;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      if (!name || typeof name !== "string" || !name.trim()) {
+        res.status(400).json({ error: "Valid name is required." });
+        return;
+      }
+
+      const updated = await db.updateUser(userId, { name: name.trim() });
+      if (!updated) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      res.json({
+        id: updated._id,
+        name: updated.name,
+        email: updated.email,
+      });
+    } catch (err) {
+      console.error("Error in update me:", err);
+      res.status(500).json({ error: "Failed to update profile." });
     }
   },
 );

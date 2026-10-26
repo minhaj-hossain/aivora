@@ -157,17 +157,35 @@ export default function AuthPage({ view: initialView, setView: setViewProp, onAu
     executeSubmit(email, password, localView === "register", name);
   };
 
-  // Demo auto-fill and submit through standard login route
-  const handleTryDemo = () => {
-    setLocalView("login");
-    const demoEmail = "demo@aivora.app";
-    const demoPassword = "AivoraDemo123!";
-    
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    
-    // Execute submit directly with the filled demo values
-    executeSubmit(demoEmail, demoPassword, false, "");
+  // One-click demo login via dedicated /api/auth/demo endpoint
+  const handleTryDemo = async () => {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/auth/demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to log in as Demo user.");
+      }
+
+      setSuccess("Sandbox authenticated! Initializing demo workspace...");
+      onAuthSuccess(data.token, data.user);
+
+      setTimeout(() => {
+        navigate(redirectPath);
+      }, 800);
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred during demo login.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const setView = (v: "login" | "register") => {
