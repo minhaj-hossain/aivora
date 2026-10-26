@@ -1,14 +1,15 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
-import { Calendar, Tag, Layers, Share2, ClipboardCopy, ArrowLeft, Play, Sparkles } from "lucide-react";
+import { Calendar, Tag, Layers, Share2, ClipboardCopy, ArrowLeft, Play, Sparkles, AlertCircle, X } from "lucide-react";
 
 export default function PublicBoardDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { token, user } = useAuth();
+  const [cloneError, setCloneError] = useState<string | null>(null);
 
   // Fetch single board details
   const { data, isLoading, error } = useQuery({
@@ -69,12 +70,13 @@ export default function PublicBoardDetailsPage() {
         // Redirect to login with redirect path
         navigate(`/login?redirect=/boards/${id}`);
       } else {
-        alert("Failed to clone this board. Please try again.");
+        setCloneError(err.message || "Failed to clone this board. Please try again.");
       }
     },
   });
 
   const handleCloneClick = () => {
+    setCloneError(null);
     if (!user) {
       navigate(`/login?redirect=/boards/${id}`);
     } else {
@@ -201,6 +203,21 @@ export default function PublicBoardDetailsPage() {
             <p className="text-[11px] text-slate-500 leading-relaxed font-body-sm">
               Deploy this strategic structure immediately as your own private board. Start chatting with Gemini 2.5-Flash to generate custom documents.
             </p>
+
+            {cloneError && (
+              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-[11px] text-red-700 leading-normal">
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                <span className="flex-1 font-body-sm">{cloneError}</span>
+                <button
+                  type="button"
+                  onClick={() => setCloneError(null)}
+                  className="text-red-400 hover:text-red-600 cursor-pointer"
+                  aria-label="Dismiss error"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
 
             <button
               onClick={handleCloneClick}

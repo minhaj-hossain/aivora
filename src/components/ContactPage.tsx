@@ -50,6 +50,8 @@ export default function ContactPage() {
             <Link to="/about" className="hover:text-slate-900 underline">About Us</Link>
             <span>•</span>
             <Link to="/terms" className="hover:text-slate-900 underline">Terms</Link>
+            <span>•</span>
+            <Link to="/privacy" className="hover:text-slate-900 underline">Privacy</Link>
           </div>
         </div>
 

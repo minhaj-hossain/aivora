@@ -123,7 +123,7 @@ export default function Sidebar({
       {/* Footer Navigation */}
       <div className="p-4 border-t border-slate-100 space-y-1.5 bg-slate-50/50">
         <button
-          onClick={() => setView("about")}
+          onClick={() => setView("contact")}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors text-xs font-bold font-display cursor-pointer"
         >
           <HelpCircle className="h-4.5 w-4.5 text-slate-400" />

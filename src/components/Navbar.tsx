@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Menu,
   X,
@@ -37,8 +37,28 @@ export default function Navbar({
   onLogout,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+    if (isProfileOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isProfileOpen]);
 
   const handleNav = (view: ActiveView) => {
+    setIsProfileOpen(false);
     setView(view);
     setMobileMenuOpen(false);
   };
@@ -215,8 +235,15 @@ export default function Navbar({
         {/* Right Side: Auth Actions / Profile Info */}
         <div className="hidden lg:flex items-center gap-4">
           {user ? (
-            <div className="relative group/profile py-2">
-              <button className="flex items-center gap-3 focus:outline-none cursor-pointer">
+            <div ref={profileDropdownRef} className="relative group/profile py-2">
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen((prev) => !prev)}
+                aria-expanded={isProfileOpen}
+                aria-haspopup="true"
+                aria-label="User account menu"
+                className="flex items-center gap-2.5 focus:outline-none cursor-pointer"
+              >
                 <div className="flex flex-col text-right">
                   <span className="text-xs font-semibold text-slate-900 font-display transition group-hover/profile:text-indigo-600">
                     {user.name}
@@ -233,10 +260,21 @@ export default function Navbar({
                   {/* Status Indicator */}
                   <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
                 </div>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
+                    isProfileOpen ? "rotate-180" : ""
+                  }`}
+                />
               </button>
 
-              {/* Hover Dropdown Menu */}
-              <div className="absolute right-0 top-full mt-1.5 w-56 origin-top-right rounded-xl border border-slate-100 bg-white p-1.5 shadow-xl shadow-slate-200/55 transition-all duration-200 opacity-0 invisible translate-y-1 group-hover/profile:opacity-100 group-hover/profile:visible group-hover/profile:translate-y-0 z-50">
+              {/* Dropdown Menu (supports both click/touch toggle and hover) */}
+              <div
+                className={`absolute right-0 top-full mt-1.5 w-56 origin-top-right rounded-xl border border-slate-100 bg-white p-1.5 shadow-xl shadow-slate-200/55 transition-all duration-200 z-50 ${
+                  isProfileOpen
+                    ? "opacity-100 visible translate-y-0 pointer-events-auto"
+                    : "opacity-0 invisible translate-y-1 pointer-events-none group-hover/profile:opacity-100 group-hover/profile:visible group-hover/profile:translate-y-0 group-hover/profile:pointer-events-auto"
+                }`}
+              >
                 <div className="px-3 py-2.5 border-b border-slate-100 mb-1.5">
                   <p className="text-xs font-semibold text-slate-700 font-display">
                     Account
@@ -270,7 +308,10 @@ export default function Navbar({
                 <div className="my-1.5 border-t border-slate-100" />
 
                 <button
-                  onClick={onLogout}
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    onLogout();
+                  }}
                   className="flex w-full items-center rounded-lg px-3 py-2.5 text-left text-xs font-semibold text-red-600 hover:bg-red-50/70 hover:text-red-700 transition-colors cursor-pointer"
                 >
                   Sign Out
@@ -298,7 +339,10 @@ export default function Navbar({
         {/* Mobile Menu Toggle Button */}
         <div className="flex lg:hidden">
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
             className="inline-flex items-center justify-center rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus:outline-none"
           >
             {mobileMenuOpen ? (

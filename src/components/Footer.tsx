@@ -134,17 +134,17 @@ export default function Footer({ setView }: FooterProps) {
             </h4>
             <ul className="space-y-4">
               <li>
-                <button onClick={() => setView("about")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
+                <button onClick={() => setView("privacy")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
                   Privacy Policy
                 </button>
               </li>
               <li>
-                <button onClick={() => setView("about")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
+                <button onClick={() => setView("terms")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
                   Terms of Service
                 </button>
               </li>
               <li>
-                <button onClick={() => setView("about")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
+                <button onClick={() => setView("privacy")} className="text-xs text-on-surface-variant hover:text-primary transition-colors cursor-pointer font-sans font-medium">
                   Security
                 </button>
               </li>

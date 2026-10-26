@@ -1,6 +1,7 @@
 import React from "react";
 import { Check, Sparkles, ArrowRight, Zap, Building2, Infinity, Crown } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.tsx";
 
 interface PricingTier {
   name: string;
@@ -90,6 +91,20 @@ const faqs = [
 ];
 
 export default function PricingPage() {
+  const { user } = useAuth();
+
+  const getTierLink = (tier: PricingTier) => {
+    if (tier.name === "Enterprise") return "/contact";
+    if (user) return "/dashboard";
+    return "/register";
+  };
+
+  const getTierCta = (tier: PricingTier) => {
+    if (tier.name === "Enterprise") return "Talk to sales";
+    if (user) return "Open Workspace";
+    return tier.cta;
+  };
+
   return (
     <div className="bg-slate-50/40 min-h-screen text-slate-800 antialiased pb-20">
       {/* Hero Banner */}
@@ -148,14 +163,14 @@ export default function PricingPage() {
               </p>
 
               <Link
-                to="/register"
+                to={getTierLink(tier)}
                 className={`mt-6 inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-3 text-xs font-bold shadow-sm transition-all cursor-pointer font-display ${
                   tier.highlighted
                     ? "bg-indigo-600 hover:bg-indigo-700 text-white"
                     : "bg-[#0F172A] hover:bg-slate-800 text-white"
                 }`}
               >
-                {tier.cta}
+                {getTierCta(tier)}
                 <ArrowRight className="h-4 w-4" />
               </Link>
 
