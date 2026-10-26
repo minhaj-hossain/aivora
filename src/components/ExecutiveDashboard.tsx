@@ -14,7 +14,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 
 interface ExecutiveDashboardProps {
   token: string | null;
-  setView: (view: ActiveView) => void;
+  setView: (view: ActiveView, boardId?: string) => void;
   setSelectedBoardId: (id: string | null) => void;
   onLogout: () => void;
   user: { name: string; email: string } | null;

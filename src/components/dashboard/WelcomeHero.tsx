@@ -6,7 +6,7 @@ interface WelcomeHeroProps {
   userName: string;
   recentBoardId: string | null;
   recentBoardTitle: string | null;
-  setView: (view: ActiveView) => void;
+  setView: (view: ActiveView, boardId?: string) => void;
   setSelectedBoardId: (id: string | null) => void;
 }
 
@@ -20,7 +20,7 @@ export default function WelcomeHero({
   const handleResume = () => {
     if (recentBoardId) {
       setSelectedBoardId(recentBoardId);
-      setView("board_workspace");
+      setView("board_workspace", recentBoardId);
     } else {
       setView("add_board");
     }

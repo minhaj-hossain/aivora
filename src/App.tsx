@@ -50,7 +50,7 @@ function AppLayout() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // compatibility navigation helper passed down to older components
-  const setView = (v: string) => {
+  const setView = (v: string, boardId?: string) => {
     if (v === "home") navigate("/");
     else if (v === "login") navigate("/login");
     else if (v === "register") navigate("/register");
@@ -65,8 +65,10 @@ function AppLayout() {
     else if (v === "pricing") navigate("/pricing");
     else if (v === "privacy") navigate("/privacy");
     else if (v === "board_workspace") {
-      if (selectedBoardId) {
-        navigate(`/boards/${selectedBoardId}/workspace`);
+      const targetId = boardId || selectedBoardId;
+      if (targetId) {
+        setSelectedBoardId(targetId);
+        navigate(`/dashboard/boards/${targetId}`);
       } else {
         navigate("/dashboard");
       }
@@ -103,7 +105,7 @@ function AppLayout() {
   else if (currentPath === "/contact") currentView = "contact";
   else if (currentPath === "/terms") currentView = "terms";
   else if (currentPath === "/pricing") currentView = "pricing";
-  else if (currentPath === "/privacy") currentView = "terms";
+  else if (currentPath === "/privacy") currentView = "privacy";
 
   const isDashboardLayout =
     (currentPath === "/dashboard" ||

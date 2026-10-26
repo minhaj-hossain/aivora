@@ -14,7 +14,7 @@ interface RecentThreadItem {
 
 interface RecentThreadsProps {
   threads: RecentThreadItem[];
-  setView: (view: ActiveView) => void;
+  setView: (view: ActiveView, boardId?: string) => void;
   setSelectedBoardId: (id: string | null) => void;
 }
 
@@ -25,7 +25,7 @@ export default function RecentThreads({
 }: RecentThreadsProps) {
   const handleLaunch = (boardId: string) => {
     setSelectedBoardId(boardId);
-    setView("board_workspace");
+    setView("board_workspace", boardId);
   };
 
   return (

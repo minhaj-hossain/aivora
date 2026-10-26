@@ -17,7 +17,7 @@ interface RecentBoardItem {
 
 interface RecentBoardsProps {
   boards: RecentBoardItem[];
-  setView: (view: ActiveView) => void;
+  setView: (view: ActiveView, boardId?: string) => void;
   setSelectedBoardId: (id: string | null) => void;
 }
 
@@ -28,7 +28,7 @@ export default function RecentBoards({
 }: RecentBoardsProps) {
   const handleLaunch = (id: string) => {
     setSelectedBoardId(id);
-    setView("board_workspace");
+    setView("board_workspace", id);
   };
 
   const getCategoryStyles = (cat: string) => {

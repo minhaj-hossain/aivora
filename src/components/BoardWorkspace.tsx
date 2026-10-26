@@ -13,6 +13,73 @@ interface BoardWorkspaceProps {
 
 type DocType = "decision_brief" | "outline" | "plan" | "draft";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatInline(escapedText: string): string {
+  return escapedText
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-inherit">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+    .replace(/`([^`]+)`/g, '<code class="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono text-slate-800">$1</code>');
+}
+
+function renderSafeMarkdown(content: string): string {
+  if (!content) return "";
+  const lines = content.split("\n");
+  const htmlParts: string[] = [];
+  let inList = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const trimmed = rawLine.trim();
+
+    // Check for unordered list item
+    const listMatch = trimmed.match(/^[-*]\s+(.*)$/);
+    if (listMatch) {
+      if (!inList) {
+        htmlParts.push('<ul class="list-disc ml-5 my-2 space-y-1">');
+        inList = true;
+      }
+      const itemContent = formatInline(escapeHtml(listMatch[1]));
+      htmlParts.push(`<li>${itemContent}</li>`);
+      continue;
+    } else if (inList) {
+      htmlParts.push("</ul>");
+      inList = false;
+    }
+
+    if (!trimmed) {
+      htmlParts.push('<div class="h-2"></div>');
+      continue;
+    }
+
+    // Headings
+    if (trimmed.startsWith("### ")) {
+      htmlParts.push(`<h3 class="text-sm font-bold font-display mt-3 mb-1 text-slate-800">${formatInline(escapeHtml(trimmed.slice(4)))}</h3>`);
+    } else if (trimmed.startsWith("## ")) {
+      htmlParts.push(`<h2 class="text-base font-bold font-display mt-4 mb-2 text-slate-900 border-b border-slate-100 pb-1">${formatInline(escapeHtml(trimmed.slice(3)))}</h2>`);
+    } else if (trimmed.startsWith("# ")) {
+      htmlParts.push(`<h1 class="text-lg font-bold font-display mt-5 mb-2 text-slate-950 border-b border-slate-200 pb-1.5">${formatInline(escapeHtml(trimmed.slice(2)))}</h1>`);
+    } else if (trimmed.startsWith("> ")) {
+      htmlParts.push(`<blockquote class="border-l-4 border-slate-400 pl-3.5 py-1.5 my-2 text-slate-600 bg-slate-50/70 rounded-r-md italic">${formatInline(escapeHtml(trimmed.slice(2)))}</blockquote>`);
+    } else {
+      htmlParts.push(`<p class="my-1.5 leading-relaxed">${formatInline(escapeHtml(trimmed))}</p>`);
+    }
+  }
+
+  if (inList) {
+    htmlParts.push("</ul>");
+  }
+
+  return htmlParts.join("");
+}
+
 export default function BoardWorkspace({ boardId, token, setView }: BoardWorkspaceProps) {
   const [board, setBoard] = useState<IBoard | null>(null);
   const [messages, setMessages] = useState<IMessage[]>([]);
@@ -155,6 +222,9 @@ export default function BoardWorkspace({ boardId, token, setView }: BoardWorkspa
       setFollowUps(data.suggestions || []);
       fetchSmartRecommendations();
     } catch (err: any) {
+      // Roll back optimistic message so it does not linger as a phantom sent message
+      setMessages(prev => prev.filter(m => m._id !== tempUserMsg._id));
+      setInputMsg(textToSend);
       const msg = err?.message || "AI co-thinker timed out or refused packages.";
       const quotaHint = /429|quota|rate.?limit|resource exhausted/i.test(msg)
         ? " (Gemini API quota exceeded — wait a moment or raise limits in Google AI Studio)."
@@ -351,7 +421,7 @@ export default function BoardWorkspace({ boardId, token, setView }: BoardWorkspa
                           : "bg-white border border-slate-200 text-slate-800 rounded-tl-none font-sans"
                       }`}
                     >
-                      <div className="markdown-body text-xs font-body-sm" dangerouslySetInnerHTML={{ __html: m.content.replace(/\n/g, "<br />") }} />
+                      <div className="markdown-body text-xs font-body-sm" dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(m.content) }} />
                     </div>
                   </div>
                 ))
@@ -520,16 +590,7 @@ export default function BoardWorkspace({ boardId, token, setView }: BoardWorkspa
 
                   {/* Markdown Display */}
                   <div className="markdown-body font-body-sm text-slate-700 leading-relaxed text-xs">
-                    <div dangerouslySetInnerHTML={{ 
-                      __html: activeDocument.content
-                        .replace(/# (.*)/g, '<h1 class="text-xl font-bold font-display mt-4 mb-2 text-slate-900 border-b border-slate-100 pb-1">$1</h1>')
-                        .replace(/## (.*)/g, '<h2 class="text-lg font-bold font-display mt-3 mb-2 text-slate-900">$1</h2>')
-                        .replace(/### (.*)/g, '<h3 class="text-sm font-semibold font-display mt-2 mb-1 text-slate-800">$1</h3>')
-                        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                        .replace(/\* (.*)/g, '<li class="list-disc ml-5 my-1">$1</li>')
-                        .replace(/\n\n/g, '<p class="my-2"></p>')
-                        .replace(/> ⚠️ (.*)/g, '<blockquote class="border-l-4 border-slate-400 pl-4 my-2 italic text-slate-600 bg-slate-50 p-2 rounded-md"><strong>Demo:</strong> $1</blockquote>')
-                    }} />
+                    <div dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(activeDocument.content) }} />
                   </div>
 
                 </div>

@@ -54,4 +54,5 @@ export type ActiveView =
   | "about"
   | "contact"
   | "pricing"
-  | "terms";
+  | "terms"
+  | "privacy";

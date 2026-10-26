@@ -4,7 +4,7 @@ import { ActiveView, IBoard } from "../types";
 
 interface ManageBoardsPageProps {
   token: string | null;
-  setView: (view: ActiveView) => void;
+  setView: (view: ActiveView, boardId?: string) => void;
   setSelectedBoardId: (id: string | null) => void;
 }
 
@@ -19,6 +19,10 @@ export default function ManageBoardsPage({ token, setView, setSelectedBoardId }:
   const [editDesc, setEditDesc] = useState("");
   const [editContext, setEditContext] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  // Delete Confirmation Modal
+  const [boardToDelete, setBoardToDelete] = useState<IBoard | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -49,12 +53,11 @@ export default function ManageBoardsPage({ token, setView, setSelectedBoardId }:
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this Board and all its chat history? This action is irreversible.")) {
-      return;
-    }
-
+  const confirmDelete = async () => {
+    if (!boardToDelete) return;
+    const id = boardToDelete._id;
     setError(null);
+    setIsDeleting(true);
     try {
       const response = await fetch(`/api/boards/${id}`, {
         method: "DELETE",
@@ -71,14 +74,17 @@ export default function ManageBoardsPage({ token, setView, setSelectedBoardId }:
 
       // Remove from state
       setBoards(boards.filter(b => b._id !== id));
+      setBoardToDelete(null);
     } catch (err: any) {
       setError(err.message || "Failed to complete deletion process.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const handleLaunchWorkspace = (id: string) => {
     setSelectedBoardId(id);
-    setView("board_workspace");
+    setView("board_workspace", id);
   };
 
   const handleOpenEdit = (b: IBoard) => {
@@ -268,7 +274,7 @@ export default function ManageBoardsPage({ token, setView, setSelectedBoardId }:
                         </button>
                         <button
                           title="Delete Board"
-                          onClick={() => handleDelete(b._id)}
+                          onClick={() => setBoardToDelete(b)}
                           className="rounded-md p-2 text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                         >
                           <Trash2 className="h-4.5 w-4.5" />
@@ -354,6 +360,46 @@ export default function ManageBoardsPage({ token, setView, setSelectedBoardId }:
               </div>
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {boardToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100 text-left space-y-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <div className="p-2.5 rounded-full bg-red-50 border border-red-100">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-display font-bold text-base text-slate-900">Delete Thinking Board</h3>
+                <p className="text-xs text-slate-400 font-sans">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed font-body-sm bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+              Are you sure you want to permanently delete <strong className="text-slate-900">"{boardToDelete.title}"</strong> and all its associated conversation turns and generated documents?
+            </p>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setBoardToDelete(null)}
+                disabled={isDeleting}
+                className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer font-display"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors cursor-pointer font-display"
+              >
+                {isDeleting ? "Deleting..." : "Permanently Delete"}
+              </button>
+            </div>
           </div>
         </div>
       )}
