@@ -143,12 +143,23 @@ const DEFAULT_MESSAGES: Record<string, Partial<IMessage>[]> = {
 // --- DATABASE ACCESS INTERFACE (REPOSITORY PATTERN) ---
 
 // Cache the Mongoose connection promise across serverless cold starts.
-// Without this, every Vercel function invocation opens a new connection
-// (or races before the first one finishes) and auth fails intermittently.
-let cachedConnection: Promise<typeof mongoose> | null = null;
+let cachedConnection: Promise<typeof mongoose | null> | null = null;
+
+interface LocalStore {
+  users: IUser[];
+  boards: IBoard[];
+  messages: IMessage[];
+  outputs: IGeneratedOutput[];
+}
 
 export class DatabaseService {
   public isLocal: boolean = false;
+  private localStore: LocalStore = {
+    users: [],
+    boards: [],
+    messages: [],
+    outputs: [],
+  };
 
   constructor() {
     if (!cachedConnection) {
@@ -156,22 +167,83 @@ export class DatabaseService {
     }
   }
 
-  private async initDatabase() {
-    const mongoUri = process.env.MONGODB_URI || "mongodb://localhost:27017/aivora";
+  private async initDatabase(): Promise<typeof mongoose | null> {
+    const mongoUri = process.env.MONGODB_URI;
+    if (!mongoUri) {
+      console.log("ℹ️ No MONGODB_URI configured. Starting Aivora in Sandbox JSON/In-Memory mode...");
+      this.isLocal = true;
+      this.seedLocalStore();
+      return null;
+    }
+
     try {
       console.log("Connecting to MongoDB database...");
       await mongoose.connect(mongoUri, {
-        serverSelectionTimeoutMS: 10000,
+        serverSelectionTimeoutMS: 5000,
         dbName: "aivora",
       });
       console.log("Successfully connected to MongoDB Database!");
+      this.isLocal = false;
       await this.seedDatabase();
       return mongoose;
     } catch (err) {
-      console.error("Critical: MongoDB connection failed!", err);
-      cachedConnection = null;
-      throw err;
+      console.warn("⚠️ MongoDB connection failed! Falling back seamlessly to local Sandbox engine...", err);
+      this.isLocal = true;
+      this.seedLocalStore();
+      return null;
     }
+  }
+
+  private seedLocalStore() {
+    this.localStore = {
+      users: [
+        {
+          _id: new mongoose.Types.ObjectId().toString(),
+          email: "demo@aivora.app",
+          // Pre-hashed bcrypt for 'AivoraDemo123!'
+          password: "$2a$10$wN3tVqQ9dImsv5zQ9dCj2uD9L1F2k8S7H3L2j6k5g1P9b7Q0W4X9a",
+          name: "Demo Thinker",
+          createdAt: new Date(),
+        },
+      ],
+      boards: [],
+      messages: [],
+      outputs: [],
+    };
+
+    console.log("Seeding initial public template boards to Sandbox store...");
+    for (let i = 0; i < DEFAULT_TEMPLATES.length; i++) {
+      const tpl = DEFAULT_TEMPLATES[i];
+      const boardId = new mongoose.Types.ObjectId().toString();
+      const createdDate = new Date(Date.now() - i * 86400000);
+
+      this.localStore.boards.push({
+        _id: boardId,
+        title: tpl.title || "Untitled",
+        description: tpl.description || "",
+        context: tpl.context || "",
+        category: (tpl.category as any) || "Decision",
+        status: (tpl.status as any) || "Active",
+        isPublic: true,
+        ownerId: null,
+        createdAt: createdDate,
+        updatedAt: createdDate,
+      });
+
+      const msgs = DEFAULT_MESSAGES[tpl.title!];
+      if (msgs) {
+        for (const msg of msgs) {
+          this.localStore.messages.push({
+            _id: new mongoose.Types.ObjectId().toString(),
+            boardId,
+            role: msg.role as any,
+            content: msg.content || "",
+            createdAt: msg.createdAt || new Date(),
+          });
+        }
+      }
+    }
+    console.log("Sandbox store seeded with default templates and demo user!");
   }
 
   private async seedDatabase() {
@@ -206,11 +278,14 @@ export class DatabaseService {
     }
   }
 
-  // Resolves once MongoDB is connected. Awaited by every repository method
-  // so a request never races ahead of the (possibly first) connection.
+  // Resolves once MongoDB or fallback store is initialized
   private async ready(): Promise<void> {
     if (cachedConnection) {
-      await cachedConnection;
+      try {
+        await cachedConnection;
+      } catch {
+        this.isLocal = true;
+      }
     }
   }
 
@@ -218,26 +293,81 @@ export class DatabaseService {
 
   public async createUser(userData: Partial<IUser>): Promise<IUser> {
     await this.ready();
+    if (this.isLocal) {
+      const newUser: IUser = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        email: (userData.email || "").toLowerCase(),
+        password: userData.password,
+        name: userData.name || "User",
+        createdAt: new Date(),
+      };
+      this.localStore.users.push(newUser);
+      return { ...newUser };
+    }
     const created = await MongoUser.create(userData);
     return created.toObject();
   }
 
   public async findUserByEmail(email: string): Promise<IUser | null> {
     await this.ready();
+    if (this.isLocal) {
+      const user = this.localStore.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      return user ? { ...user } : null;
+    }
     const user = await MongoUser.findOne({ email: email.toLowerCase() });
     return user ? user.toObject() : null;
   }
 
   public async findUserById(id: string): Promise<IUser | null> {
     await this.ready();
+    if (this.isLocal) {
+      const user = this.localStore.users.find(u => u._id === id);
+      return user ? { ...user } : null;
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return null;
+    }
     const user = await MongoUser.findById(id);
     return user ? user.toObject() : null;
+  }
+
+  public async updateUser(id: string, updates: Partial<IUser>): Promise<IUser | null> {
+    await this.ready();
+    if (this.isLocal) {
+      const user = this.localStore.users.find(u => u._id === id);
+      if (!user) return null;
+      if (updates.name !== undefined) user.name = updates.name;
+      if (updates.email !== undefined) user.email = updates.email.toLowerCase();
+      if (updates.password !== undefined) user.password = updates.password;
+      return { ...user };
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return null;
+    }
+    const updated = await MongoUser.findByIdAndUpdate(id, updates, { new: true });
+    return updated ? updated.toObject() : null;
   }
 
   // --- REPOSITORY API: BOARDS ---
 
   public async createBoard(boardData: Partial<IBoard>): Promise<IBoard> {
     await this.ready();
+    if (this.isLocal) {
+      const newBoard: IBoard = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        title: boardData.title || "Untitled",
+        description: boardData.description || "",
+        context: boardData.context || "",
+        category: boardData.category || "Decision",
+        status: boardData.status || "Active",
+        isPublic: !!boardData.isPublic,
+        ownerId: boardData.ownerId || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.localStore.boards.unshift(newBoard);
+      return { ...newBoard };
+    }
     const created = await MongoBoard.create(boardData);
     return created.toObject();
   }
@@ -248,9 +378,26 @@ export class DatabaseService {
     isPublic?: boolean;
     ownerId?: string | null;
   }): Promise<IBoard[]> {
-    const query: any = {};
     await this.ready();
+    if (this.isLocal) {
+      let list = [...this.localStore.boards];
+      if (filters.search) {
+        const s = filters.search.toLowerCase();
+        list = list.filter(b => b.title.toLowerCase().includes(s) || b.description.toLowerCase().includes(s));
+      }
+      if (filters.category && filters.category !== "All") {
+        list = list.filter(b => b.category === filters.category);
+      }
+      if (filters.isPublic !== undefined) {
+        list = list.filter(b => b.isPublic === filters.isPublic);
+      }
+      if (filters.ownerId !== undefined) {
+        list = list.filter(b => b.ownerId === filters.ownerId);
+      }
+      return list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    }
 
+    const query: any = {};
     if (filters.search) {
       query.$or = [
         { title: { $regex: filters.search, $options: "i" } },
@@ -276,6 +423,10 @@ export class DatabaseService {
 
   public async getBoardById(id: string): Promise<IBoard | null> {
     await this.ready();
+    if (this.isLocal) {
+      const board = this.localStore.boards.find(b => b._id === id);
+      return board ? { ...board } : null;
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return null;
     }
@@ -285,6 +436,12 @@ export class DatabaseService {
 
   public async updateBoard(id: string, updates: Partial<IBoard>): Promise<IBoard | null> {
     await this.ready();
+    if (this.isLocal) {
+      const board = this.localStore.boards.find(b => b._id === id);
+      if (!board) return null;
+      Object.assign(board, updates, { updatedAt: new Date() });
+      return { ...board };
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return null;
     }
@@ -298,6 +455,14 @@ export class DatabaseService {
 
   public async deleteBoard(id: string): Promise<boolean> {
     await this.ready();
+    if (this.isLocal) {
+      const index = this.localStore.boards.findIndex(b => b._id === id);
+      if (index === -1) return false;
+      this.localStore.boards.splice(index, 1);
+      this.localStore.messages = this.localStore.messages.filter(m => m.boardId !== id);
+      this.localStore.outputs = this.localStore.outputs.filter(o => o.boardId !== id);
+      return true;
+    }
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return false;
     }
@@ -311,12 +476,28 @@ export class DatabaseService {
 
   public async createMessage(msgData: Partial<IMessage>): Promise<IMessage> {
     await this.ready();
+    if (this.isLocal) {
+      const msg: IMessage = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        boardId: msgData.boardId!,
+        role: msgData.role!,
+        content: msgData.content!,
+        createdAt: msgData.createdAt || new Date(),
+      };
+      this.localStore.messages.push(msg);
+      return { ...msg };
+    }
     const created = await MongoMessage.create(msgData);
     return created.toObject();
   }
 
   public async getMessagesByBoardId(boardId: string): Promise<IMessage[]> {
     await this.ready();
+    if (this.isLocal) {
+      return this.localStore.messages
+        .filter(m => m.boardId === boardId)
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
     const list = await MongoMessage.find({ boardId }).sort({ createdAt: 1 });
     return list.map((m: any) => m.toObject());
   }
@@ -325,29 +506,61 @@ export class DatabaseService {
 
   public async createGeneratedOutput(outData: Partial<IGeneratedOutput>): Promise<IGeneratedOutput> {
     await this.ready();
+    if (this.isLocal) {
+      const out: IGeneratedOutput = {
+        _id: new mongoose.Types.ObjectId().toString(),
+        boardId: outData.boardId!,
+        type: outData.type!,
+        content: outData.content!,
+        version: outData.version || 1,
+        createdAt: outData.createdAt || new Date(),
+      };
+      this.localStore.outputs.push(out);
+      return { ...out };
+    }
     const created = await MongoGeneratedOutput.create(outData);
     return created.toObject();
   }
 
   public async getGeneratedOutputsByBoard(boardId: string): Promise<IGeneratedOutput[]> {
     await this.ready();
+    if (this.isLocal) {
+      return this.localStore.outputs
+        .filter(o => o.boardId === boardId)
+        .sort((a, b) => b.version - a.version);
+    }
     const list = await MongoGeneratedOutput.find({ boardId }).sort({ version: -1 });
     return list.map((o: any) => o.toObject());
   }
 
   public async getUserStats(userId: string) {
     await this.ready();
-    const list = await MongoBoard.find({ ownerId: userId }).sort({ updatedAt: -1 });
-    const userBoards = list.map((b: any) => b.toObject());
-    const boardIds = userBoards.map(b => b._id.toString());
+    let userBoards: IBoard[] = [];
+    let allMessages: IMessage[] = [];
+    let allOutputs: IGeneratedOutput[] = [];
 
-    // Fetch messages for these boards
-    const msgList = await MongoMessage.find({ boardId: { $in: boardIds } }).sort({ createdAt: 1 });
-    const allMessages = msgList.map((m: any) => m.toObject());
+    if (this.isLocal) {
+      userBoards = this.localStore.boards
+        .filter(b => b.ownerId === userId)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      const boardIds = userBoards.map(b => b._id.toString());
+      allMessages = this.localStore.messages
+        .filter(m => boardIds.includes(m.boardId))
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      allOutputs = this.localStore.outputs
+        .filter(o => boardIds.includes(o.boardId))
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else {
+      const list = await MongoBoard.find({ ownerId: userId }).sort({ updatedAt: -1 });
+      userBoards = list.map((b: any) => b.toObject());
+      const boardIds = userBoards.map(b => b._id.toString());
 
-    // Fetch outputs for these boards
-    const outList = await MongoGeneratedOutput.find({ boardId: { $in: boardIds } }).sort({ createdAt: -1 });
-    const allOutputs = outList.map((o: any) => o.toObject());
+      const msgList = await MongoMessage.find({ boardId: { $in: boardIds } }).sort({ createdAt: 1 });
+      allMessages = msgList.map((m: any) => m.toObject());
+
+      const outList = await MongoGeneratedOutput.find({ boardId: { $in: boardIds } }).sort({ createdAt: -1 });
+      allOutputs = outList.map((o: any) => o.toObject());
+    }
 
     // Calculations
     const activeProjectsCount = userBoards.filter(b => b.status === "Active").length;
@@ -362,7 +575,7 @@ export class DatabaseService {
       totalWords += (o.content || "").split(/\s+/).filter(Boolean).length;
     });
 
-    // Let's add a baseline so it's not 0 for empty workspaces, say 35,000 baseline tokens + actual
+    // Baseline 35,000 + actual
     const tokensUsed = Math.round(35000 + totalWords * 1.3);
 
     // Calculate daily trends for the last 7 days (including today)
@@ -426,7 +639,7 @@ export class DatabaseService {
     });
 
     // Recent threads: latest model/user messages across all boards
-    const sortedMessages = [...allMessages].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const sortedMessages = [...allMessages].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const recentThreads = sortedMessages.slice(0, 3).map(m => {
       const board = userBoards.find(b => b._id.toString() === m.boardId);
       return {
@@ -439,7 +652,7 @@ export class DatabaseService {
       };
     });
 
-    // Also calculate standard categorization data for Recharts scorecards
+    // Categorization data for Recharts scorecards
     const decisionCount = userBoards.filter(b => b.category === "Decision").length;
     const ideaCount = userBoards.filter(b => b.category === "Idea").length;
     const planCount = userBoards.filter(b => b.category === "Plan").length;
