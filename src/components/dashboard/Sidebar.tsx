@@ -1,6 +1,7 @@
 import React from "react";
 import { LayoutDashboard, FolderKanban, Compass, PlusCircle, HelpCircle, LogOut, Settings, Home } from "lucide-react";
 import { ActiveView } from "../../types";
+import AivoraLogo from "../AivoraLogo";
 
 interface SidebarProps {
   currentView: ActiveView;
@@ -67,9 +68,7 @@ export default function Sidebar({
           onClick={() => setView("home")}
           className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-slate-50 cursor-pointer"
         >
-          <div className="h-8 w-8 rounded-md bg-slate-900 text-white flex items-center justify-center text-[11px] font-extrabold uppercase font-display border border-slate-200 shadow-sm shrink-0">
-            A
-          </div>
+          <AivoraLogo className="h-8 w-8" />
           <div className="leading-none">
             <span className="text-sm font-bold text-slate-900 font-display block">Aivora</span>
             <span className="text-[9px] text-slate-400 font-sans block">Home Platform</span>

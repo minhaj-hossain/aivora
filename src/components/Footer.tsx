@@ -1,6 +1,7 @@
 import React from "react";
 import { ActiveView } from "../types";
 import { Sparkles, Mail, ShieldAlert, Github, Twitter, Linkedin, Heart } from "lucide-react";
+import AivoraLogo from "./AivoraLogo";
 
 interface FooterProps {
   setView: (view: ActiveView) => void;
@@ -20,12 +21,7 @@ export default function Footer({ setView }: FooterProps) {
               onClick={() => setView("home")} 
               className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity select-none"
             >
-              <img 
-                alt="Aivora Logo" 
-                className="h-8 w-8 object-contain" 
-                referrerPolicy="no-referrer"
-                src="https://lh3.googleusercontent.com/aida/AP1WRLuHWJcwMtrYHoLGsTp_dOS1kJgs2u3cHrOhtfSkGUsFZrHf9cv-V25TX03BzxTg_0emSq59rcmiSBFYFqqSZATx3_H_4cjttGZQiZO_z4TeOQoU_DZ3EcXMwj7SmWm_VYw6YSQz30QXmbl99_m7pVKx4Z5f8Vk7CuCsDD9wixSQ2rlZGoXGUmY21WfMuDKcEJIzfGBE60Her-4DI-9bfdaJ09oNotW6hpYUhxmbi9Wxmod6Hnwopbds4Qs"
-              />
+              <AivoraLogo className="h-8 w-8" />
               <span className="text-xl font-bold font-display text-primary tracking-tight">
                 Aivora
               </span>

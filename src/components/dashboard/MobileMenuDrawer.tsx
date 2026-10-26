@@ -1,6 +1,7 @@
 import React from "react";
 import { X, Settings, HelpCircle, LogOut, ShieldAlert, BadgeCheck, Sparkles, Home } from "lucide-react";
 import { ActiveView } from "../../types";
+import AivoraLogo from "../AivoraLogo";
 
 interface MobileMenuDrawerProps {
   isOpen: boolean;
@@ -33,8 +34,8 @@ export default function MobileMenuDrawer({
       <aside className="fixed left-0 top-0 h-full w-80 z-55 bg-white shadow-2xl flex flex-col p-6 gap-6 transform translate-x-0 transition-transform duration-300 ease-in-out">
         {/* Header with Close */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-indigo-600 animate-pulse" />
+          <div className="flex items-center gap-2.5">
+            <AivoraLogo className="h-6 w-6" />
             <h2 className="font-display text-sm font-bold text-slate-900">Aivora Enterprise</h2>
           </div>
           <button

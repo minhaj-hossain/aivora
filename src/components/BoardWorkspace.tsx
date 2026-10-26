@@ -201,13 +201,12 @@ export default function BoardWorkspace({ boardId, token, setView }: BoardWorkspa
         body: JSON.stringify({ message: textToSend.trim() }),
       });
 
+      const rawText = await response.text();
       let data: any = {};
       try {
-        data = await response.json();
+        data = JSON.parse(rawText);
       } catch {
-        // Server may have returned a non-JSON error page (e.g. gateway timeout).
-        const text = await response.text().catch(() => "");
-        throw new Error(text || `Request failed (${response.status}). Check your connection and retry.`);
+        throw new Error(rawText || `Request failed (${response.status}). Check your connection and retry.`);
       }
 
       if (!response.ok) {

@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Sparkles, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, ArrowRight } from "lucide-react";
 import { useAuth } from "../context/AuthContext.tsx";
 import { IUser } from "../types";
+import AivoraLogo from "./AivoraLogo";
 
 interface AuthPageProps {
   view: "login" | "register";
@@ -203,11 +204,7 @@ export default function AuthPage({ view: initialView, setView: setViewProp, onAu
 
         <div className="absolute top-0 left-0 p-8 z-20">
           <Link to="/" className="flex items-center space-x-3 cursor-pointer group">
-            <img 
-              alt="Aivora Logo" 
-              className="w-10 h-10 object-contain transition-transform group-hover:scale-105" 
-              src="https://lh3.googleusercontent.com/aida/AP1WRLuHWJcwMtrYHoLGsTp_dOS1kJgs2u3cHrOhtfSkGUsFZrHf9cv-V25TX03BzxTg_0emSq59rcmiSBFYFqqSZATx3_H_4cjttGZQiZO_z4TeOQoU_DZ3EcXMwj7SmWm_VYw6YSQz30QXmbl99_m7pVKx4Z5f8Vk7CuCsDD9wixSQ2rlZGoXGUmY21WfMuDKcEJIzfGBE60Her-4DI-9bfdaJ09oNotW6hpYUhxmbi9Wxmod6Hnwopbds4Qs"
-            />
+            <AivoraLogo className="w-10 h-10 transition-transform group-hover:scale-105" />
             <span className="font-display text-2xl font-bold tracking-tight text-[#0F172A]">Aivora</span>
           </Link>
         </div>
@@ -267,11 +264,7 @@ export default function AuthPage({ view: initialView, setView: setViewProp, onAu
       <section className="flex-1 flex items-center justify-center p-6 md:p-12 bg-[#f7f9fb] relative">
         <div className="absolute top-8 left-1/2 -translate-x-1/2 md:hidden">
           <Link to="/" className="flex items-center space-x-2 cursor-pointer">
-            <img 
-              alt="Aivora Logo" 
-              className="w-10 h-10 object-contain" 
-              src="https://lh3.googleusercontent.com/aida/AP1WRLuHWJcwMtrYHoLGsTp_dOS1kJgs2u3cHrOhtfSkGUsFZrHf9cv-V25TX03BzxTg_0emSq59rcmiSBFYFqqSZATx3_H_4cjttGZQiZO_z4TeOQoU_DZ3EcXMwj7SmWm_VYw6YSQz30QXmbl99_m7pVKx4Z5f8Vk7CuCsDD9wixSQ2rlZGoXGUmY21WfMuDKcEJIzfGBE60Her-4DI-9bfdaJ09oNotW6hpYUhxmbi9Wxmod6Hnwopbds4Qs"
-            />
+            <AivoraLogo className="w-10 h-10" />
             <span className="font-display text-xl font-bold tracking-tight text-[#0F172A]">Aivora</span>
           </Link>
         </div>

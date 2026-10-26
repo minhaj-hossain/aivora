@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ActiveView, IUser } from "../types";
 import { motion } from "motion/react";
+import AivoraLogo from "./AivoraLogo";
 
 interface NavbarProps {
   currentView: ActiveView;
@@ -72,12 +73,7 @@ export default function Navbar({
             onClick={() => handleNav("home")}
             className="flex cursor-pointer items-center gap-2.5 transition hover:opacity-90 select-none"
           >
-            <img
-              alt="Aivora Logo"
-              className="h-8 w-8 object-contain"
-              referrerPolicy="no-referrer"
-              src="https://lh3.googleusercontent.com/aida/AP1WRLuHWJcwMtrYHoLGsTp_dOS1kJgs2u3cHrOhtfSkGUsFZrHf9cv-V25TX03BzxTg_0emSq59rcmiSBFYFqqSZATx3_H_4cjttGZQiZO_z4TeOQoU_DZ3EcXMwj7SmWm_VYw6YSQz30QXmbl99_m7pVKx4Z5f8Vk7CuCsDD9wixSQ2rlZGoXGUmY21WfMuDKcEJIzfGBE60Her-4DI-9bfdaJ09oNotW6hpYUhxmbi9Wxmod6Hnwopbds4Qs"
-            />
+            <AivoraLogo className="h-8 w-8" />
             <span className="font-display text-xl font-bold tracking-tight text-[#0F172A]">
               Aivora
             </span>
